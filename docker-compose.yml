@@ -1,0 +1,53 @@
+version: '3.1'
+
+services:
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+    image: node:latest
+    tty: true
+    volumes:
+      - ./node:/usr/src/app
+    networks:
+      - fullcycle-network
+    depends_on:
+      - mysql
+    healthcheck:
+      test: ["CMD", "ping", "mysql:3306", "-c", "3", "-w", "10"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    working_dir: /usr/src/app
+
+  nginx:
+    build:
+        context: ./nginx
+        dockerfile: Dockerfile
+    image: nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - fullcycle-network
+    depends_on:
+      - node
+
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_DATABASE: fullcycle
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./mysql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./mysql/data:/var/lib/mysql
+    networks:
+      - fullcycle-network
+
+networks:
+  fullcycle-network:
+    driver: bridge
